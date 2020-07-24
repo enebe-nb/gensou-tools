@@ -1,0 +1,9 @@
+{
+  "name": "gensou-tools",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-speech": "^1.0.4",
+    "twitch": "^4.1.3",
+    "twitch-pubsub-client": "^4.1.3"
+  }
+}

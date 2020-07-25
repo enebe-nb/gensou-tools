@@ -1,17 +1,16 @@
 process.on('unhandledRejection', e => console.error(e));
 const options = require('./lib/options').fromProcess();
-const twitch = new (require('twitch-pubsub-client'))();
-const synth = new (require('node-speech').tts)(options.lang);
+const tts = require('./lib/tts')(options.lang);
+const util = require('util');
 
-if (options['list-lang']) {console.log(synth.installed_cultures()); return;}
-if (options['list-voices']) {console.log(synth.get_voices()); return;}
-synth.set_voice(options.voice);
+const twitchClient = require('twitch').withCredentials(options.twitchClientId, options.twitchToken);
+const pubsub = new (require('twitch-pubsub-client'))();
 
 async function startTwitchService() {
-    await twitch.registerUserListener(options.twitchClientId);
-    const subscribeListener = twitch.onSubscription(options.twitchUserId, (message) => {
-        synth.speak(message.userDisplayName + ' just subscribed!');
-        if (message.message) synth.speak('They said: ' + message.message.message);
+    await pubsub.registerUserListener(twitchClient);
+    const subscribeListener = twitch.onSubscription(options.twitchUserId, async (message) => {
+        await tts(util.format(options.textUsername, message.userDisplayName));
+        if (message.message) await tts(util.format(options.textMessage, message.message.message));
     });
     return twitch;
 }

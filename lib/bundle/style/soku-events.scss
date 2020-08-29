@@ -1,0 +1,42 @@
+body, #main {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.notifier {
+    padding: 3px 6px;
+    border-bottom-right-radius: 3px;
+    background-color: rgba(#333, $alpha: 0.3);
+    color: #fff;
+    text-shadow: 1px 1px 1px #333;
+    position: absolute;
+}
+
+.portrait {
+    position: absolute;
+    height: 100%;
+    top: 0;
+
+    img {
+        display: block;
+        height: 100%;
+    }
+
+    &.right {
+        right: 0;
+        .deck-view {justify-content: flex-end;}
+        img {transform: scaleX(-1);}
+    }
+}
+
+.deck-view {
+    position: absolute;
+    bottom: 0px;
+    display: flex;
+    flex-flow: wrap-reverse;
+
+    .item {
+        width: 32px;
+    }
+}

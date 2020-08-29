@@ -1,0 +1,11 @@
+# Asio C++ Library
+set(ASIO_ROOT ${CMAKE_SOURCE_DIR}/thirdparty/asio)
+if(NOT EXISTS ${ASIO_ROOT})
+    set(ASIO_URI https://downloads.sourceforge.net/project/asio/asio/1.18.0%20%28Stable%29/asio-1.18.0.zip)
+	message(STATUS "Downloading asio from ${ASIO_URI}")
+    file(DOWNLOAD ${ASIO_URI} ${ASIO_ROOT}-1.18.0.zip)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xfz ${ASIO_ROOT}-1.18.0.zip WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/thirdparty" )
+    file(RENAME ${ASIO_ROOT}-1.18.0 ${ASIO_ROOT})
+    file(REMOVE ${ASIO_ROOT}-1.18.0.zip)
+endif()
+set(ASIO_INCLUDE_DIR ${ASIO_ROOT}/include PARENT_SCOPE)

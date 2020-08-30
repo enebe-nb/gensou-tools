@@ -1,3 +1,5 @@
 <div class="notifier">
-    <div class="notification" v-for="item in notifications">{{item.message}}</div>
+    <transition name="fade">
+        <div class="notification" v-for="item in notifications">{{item.message}}</div>
+    </transition>
 </div>

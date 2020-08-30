@@ -9,6 +9,11 @@
 //#include "address.h"
 
 static Server wsserver;
+static std::mutex dataLock;
+static bool isCreated = false;
+static std::string lastCharacters("characters 21 21");
+static std::string lastDeck1("deck1");
+static std::string lastDeck2("deck2");
 
 static DWORD orig_BattleOnProcess;
 #define BattleOnProcess(p) Ccall(p, orig_BattleOnProcess, int, ())()
@@ -26,14 +31,28 @@ std::string getDeckBase(void* player, std::string buffer) {
 	return buffer;
 }
 
-static bool isCreated = false;
+void onSocketOpen(websocketpp::connection_hdl conn) {
+	std::cout << "socket open" << std::endl;
+	std::lock_guard<std::mutex> lock(dataLock);
+	if (!isCreated) return;
+	wsserver.send(conn, lastCharacters);
+	wsserver.send(conn, lastDeck1);
+	wsserver.send(conn, lastDeck2);
+}
+
 void comp_BattleOnCreate(void* This) {
 	void* p1 = ACCESS_PTR(g_pbattleMgr, ADDR_BMGR_P1);
 	void* p2 = ACCESS_PTR(g_pbattleMgr, ADDR_BMGR_P2);
-	//wsserver.send(std::string("created: ") + std::to_string((int)p1) + "/" + std::to_string((int)p2));
-	wsserver.send(std::string("characters ") + std::to_string((int)ACCESS_CHAR(p1, CF_CHARACTER_INDEX)) + " " + std::to_string((int)ACCESS_CHAR(p2, CF_CHARACTER_INDEX)));
-	wsserver.send(getDeckBase(p1, "deck1"));
-	wsserver.send(getDeckBase(p2, "deck2"));
+	
+	dataLock.lock();
+	lastCharacters = std::string("characters ") + std::to_string((int)ACCESS_CHAR(p1, CF_CHARACTER_INDEX)) + " " + std::to_string((int)ACCESS_CHAR(p2, CF_CHARACTER_INDEX));
+	lastDeck1 = getDeckBase(p1, "deck1");
+	lastDeck2 = getDeckBase(p2, "deck2");
+	dataLock.unlock();
+
+	wsserver.send(lastCharacters);
+	wsserver.send(lastDeck1);
+	wsserver.send(lastDeck2);
 }
 
 // 0x2c ROUND BEFORE
@@ -42,30 +61,21 @@ void comp_BattleOnCreate(void* This) {
 // 0x08 DESTROY 2
 
 int __fastcall repl_BattleOnProcess(void* This) {
+	dataLock.lock();
 	if (!isCreated) {
 		isCreated = true;
+		dataLock.unlock();
 		comp_BattleOnCreate(This);
-	}
+	} else dataLock.unlock();
 
 	int ret = BattleOnProcess(This);
-
-	// Get address to the player data based on data inside "Battle Manager"
-	//void* p1 = ACCESS_PTR(battleManager, ADDR_BMGR_P1);
-	//void* p2 = ACCESS_PTR(battleManager, ADDR_BMGR_P2);
-
-	/* HEALTH DISPLAY */
-	//ACCESS_<variable_type>() is both used for accessing and writing to the resource.
-	//Character variables are in fields.h l.1 "Character class"
-	//short p1Health = ACCESS_SHORT(p1, CF_CURRENT_HEALTH);
-	//short p1Spirit = ACCESS_SHORT(p1, CF_CURRENT_SPIRIT);
-	//short p2Health = ACCESS_SHORT(p2, CF_CURRENT_HEALTH);
-	//short p2Spirit = ACCESS_SHORT(p2, CF_CURRENT_SPIRIT);
-
 	return ret;	
 }
 
 void* __fastcall repl_BattleOnDestroy(void* This) {
+	dataLock.lock();
 	isCreated = false;
+	dataLock.unlock();
 
 	return BattleOnDestroy(This);
 }
@@ -90,7 +100,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	::VirtualProtect((PVOID)rdata_Offset, rdata_Size, old, &old);
 	::FlushInstructionCache(GetCurrentProcess(), NULL, 0);
 
-	wsserver.start();
+	wsserver.start(onSocketOpen);
 
 	return true;
 }

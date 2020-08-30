@@ -20,3 +20,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_library(soku-events MODULE src/main.cpp)
 target_link_libraries(soku-events shlwapi -static)
 #set_target_properties(soku-events PROPERTIES PREFIX "")
+
+add_custom_command(TARGET soku-events POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:soku-events> ${PROJECT_SOURCE_DIR}/dist/${targetfile}
+)

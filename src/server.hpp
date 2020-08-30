@@ -12,6 +12,7 @@ protected:
     std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl> > connections;
     std::thread* loop = nullptr;
     std::mutex lock;
+    void(*openCB)(websocketpp::connection_hdl) = nullptr;
 
     inline void run() {
         endpoint.listen(6723);
@@ -20,6 +21,7 @@ protected:
     }
 
     inline void on_open(websocketpp::connection_hdl conn) {
+        if (openCB) openCB(conn);
         std::lock_guard<std::mutex> guard(lock);
         connections.insert(conn);
     }
@@ -45,7 +47,8 @@ public:
         loop = nullptr;
     }
 
-    inline void start() {
+    inline void start(void(*openCB)(websocketpp::connection_hdl)) {
+        this->openCB = openCB;
         stop();
         loop = new std::thread(&Server::run, this);
     }
@@ -56,5 +59,10 @@ public:
         for (auto iter = connections.begin(); iter != connections.end(); ++iter) {
             endpoint.send(*iter, data, websocketpp::frame::opcode::text);
         }
+    }
+
+    inline void send(websocketpp::connection_hdl conn, const std::string& data) {
+        std::cout << "sending data(single): " << data << std::endl;
+        endpoint.send(conn, data, websocketpp::frame::opcode::text);
     }
 };

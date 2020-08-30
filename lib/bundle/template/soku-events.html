@@ -1,9 +1,11 @@
 <div class="soku-events">
-    <portrait :character="p1">
-        <deck-view :character="p1" :deck="deck1"/>
-    </portrait>
-    <portrait :character="p2" right="true">
-        <deck-view :character="p2" :deck="deck2"/>
-    </portrait>
+    <portrait :character="p1"/>
+    <portrait :character="p2" right="true"/>
+    <div class="deck" :class="ratio">
+        <card :character="p1" v-for="item in deck1" :card="item"/>
+    </div>
+    <div class="deck" :class="ratio"right="true">
+        <card :character="p2" v-for="item in deck2" :card="item"/>
+    </div>
     <notifier ref="notifier"/>
 </div>

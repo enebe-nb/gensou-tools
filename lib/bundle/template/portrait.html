@@ -1,4 +1,5 @@
 <div class="portrait" :class="{right:right}">
-    <img :src="'./portrait/'+character+'.png'" />
-    <slot></slot>
+    <transition name="bounce" mode="in-out">
+        <img :key="character" :src="'./portrait/'+character+'.png'" />
+    </transition>
 </div>

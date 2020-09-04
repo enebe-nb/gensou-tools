@@ -4,7 +4,7 @@
     <div class="deck" :class="ratio">
         <card :character="p1" v-for="item in deck1" :card="item"/>
     </div>
-    <div class="deck" :class="ratio"right="true">
+    <div class="deck right" :class="ratio">
         <card :character="p2" v-for="item in deck2" :card="item"/>
     </div>
     <notifier ref="notifier"/>

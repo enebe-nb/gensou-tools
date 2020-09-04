@@ -2,6 +2,7 @@ body, #main {
     margin: 0;
     padding: 0;
     height: 100%;
+    overflow: hidden;
 }
 
 .notifier {
@@ -16,7 +17,6 @@ body, #main {
 .portrait {
     height: 100%;
     width: 100%;
-    overflow: hidden;
 
     img {
         position: absolute;
@@ -67,7 +67,7 @@ body, #main {
 
 .bounce-enter {
     transform: translateX(-100%);
-    .rigth & {
-        transform: translateX(100%);
+    .right & {
+        transform: scaleX(-1) translateX(-100%) !important;
     }
 }

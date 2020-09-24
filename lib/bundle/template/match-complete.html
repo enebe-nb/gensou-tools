@@ -1,0 +1,7 @@
+<div class="match-complete">
+    <span>(Round {{event.round}})
+        <span :class="event.isPlayer1Winner ? 'winner' : 'loser'">{{event.player1}}</span>
+        <span class="scores">{{event.scores}}</span>
+        <span :class="event.isPlayer1Winner ? 'loser' : 'winner'">{{event.player2}}</span>
+    </span>
+</div>

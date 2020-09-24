@@ -1,0 +1,8 @@
+<div class="challonge">
+    <transition name="fade" mode="out-in">
+        <tournament-started v-if="eventQueue.length && eventQueue[0].type == 'started'" :key="eventQueue[0].id" :event="eventQueue[0].data"/>
+        <match-started v-if="eventQueue.length && eventQueue[0].type == 'matchStarted'" :key="eventQueue[0].id" :event="eventQueue[0].data"/>
+        <match-complete v-if="eventQueue.length && eventQueue[0].type == 'matchComplete'" :key="eventQueue[0].id" :event="eventQueue[0].data"/>
+    </transition>
+    <notifier ref="notifier"/>
+</div>

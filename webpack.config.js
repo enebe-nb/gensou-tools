@@ -2,7 +2,8 @@ const path = require('path');
 
 module.exports = {
     entry: {
-        'soku-events': './lib/bundle/soku-events.js'
+        'challonge': './lib/bundle/challonge.js',
+        'soku-events': './lib/bundle/soku-events.js',
     },
     output: {
         path: path.resolve(__dirname, 'dist'),

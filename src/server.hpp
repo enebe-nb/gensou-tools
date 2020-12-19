@@ -54,7 +54,6 @@ public:
     }
 
     inline void send(const std::string& data) {
-        std::cout << "sending data: " << data << std::endl;
         std::lock_guard<std::mutex> guard(lock);
         for (auto iter = connections.begin(); iter != connections.end(); ++iter) {
             endpoint.send(*iter, data, websocketpp::frame::opcode::text);
@@ -62,7 +61,6 @@ public:
     }
 
     inline void send(websocketpp::connection_hdl conn, const std::string& data) {
-        std::cout << "sending data(single): " << data << std::endl;
         endpoint.send(conn, data, websocketpp::frame::opcode::text);
     }
 };

@@ -32,7 +32,6 @@ std::string getDeckBase(void* player, std::string buffer) {
 }
 
 void onSocketOpen(websocketpp::connection_hdl conn) {
-	std::cout << "socket open" << std::endl;
 	std::lock_guard<std::mutex> lock(dataLock);
 	if (!isCreated) return;
 	wsserver.send(conn, lastCharacters);
@@ -85,14 +84,7 @@ extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
 	return ::memcmp(TARGET_HASH, hash, sizeof TARGET_HASH) == 0;
 }
 
-std::ofstream outlog;
-
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
-	outlog.open("outlog.txt");
-	std::cout.set_rdbuf(outlog.rdbuf());
-	std::cout << "starting dll" << std::endl;
-	std::cout.flush();
-
 	DWORD old;
 	::VirtualProtect((PVOID)rdata_Offset, rdata_Size, PAGE_WRITECOPY, &old);
 	orig_BattleOnProcess = TamperDword(vtbl_CBattleManager + 0x0c, union_cast<DWORD>(repl_BattleOnProcess));
@@ -107,7 +99,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 extern "C" __declspec(dllexport) void AtExit() {
 	wsserver.stop();
-	outlog.close();
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {

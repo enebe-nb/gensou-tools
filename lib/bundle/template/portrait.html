@@ -1,5 +1,5 @@
 <div class="portrait" :class="{right:right}">
     <transition name="bounce" mode="in-out">
-        <img :key="character" :src="'./portrait/'+character+'.png'" />
+        <div class="img" :key="character" :style="{width: width, 'background-image': 'url(\'./portrait/'+character+'.png\')'}" />
     </transition>
 </div>

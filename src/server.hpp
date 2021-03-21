@@ -12,16 +12,18 @@ protected:
     std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl> > connections;
     std::thread* loop = nullptr;
     std::mutex lock;
-    void(*openCB)(websocketpp::connection_hdl) = nullptr;
+    websocketpp::open_handler onOpenCallback;
 
     inline void run() {
-        endpoint.listen(6723);
-	    endpoint.start_accept();
-	    endpoint.run();        
+        try {
+            endpoint.listen(6723);
+            endpoint.start_accept();
+            endpoint.run();
+        } catch (const std::exception& e) {}
     }
 
     inline void on_open(websocketpp::connection_hdl conn) {
-        if (openCB) openCB(conn);
+        if (onOpenCallback) onOpenCallback(conn);
         std::lock_guard<std::mutex> guard(lock);
         connections.insert(conn);
     }
@@ -33,8 +35,8 @@ protected:
 public:
     inline Server() {
         endpoint.set_error_channels(websocketpp::log::elevel::all);
-	    endpoint.set_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
- 	    endpoint.init_asio();
+        endpoint.set_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
+        endpoint.init_asio();
 
         endpoint.set_open_handler(std::bind(&Server::on_open, this, websocketpp::lib::placeholders::_1));
         endpoint.set_close_handler(std::bind(&Server::on_close, this, websocketpp::lib::placeholders::_1));
@@ -42,13 +44,13 @@ public:
 
     inline void stop() {
         if (!loop) return;
-        endpoint.stop();
+        if (endpoint.is_listening()) endpoint.stop();
         loop->join();
         loop = nullptr;
     }
 
-    inline void start(void(*openCB)(websocketpp::connection_hdl)) {
-        this->openCB = openCB;
+    inline void start(websocketpp::open_handler onOpenCallback) {
+        this->onOpenCallback = onOpenCallback;
         stop();
         loop = new std::thread(&Server::run, this);
     }

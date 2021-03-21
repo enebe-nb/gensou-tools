@@ -1,1 +1,3 @@
-<img class="item" :src="'./cards/'+(parseInt(card) < 100 ? 'system' : character)+'/card'+ldInt(card)+'.png'" />
+<img class="item"
+    :src="'./cards/'+(parseInt(card) < 100 ? 'system' : character)+'/card'+ldInt(card)+'.png'"
+    :style="{width: width}" />

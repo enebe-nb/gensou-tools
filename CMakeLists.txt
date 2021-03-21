@@ -14,6 +14,7 @@ add_definitions(-D_WEBSOCKETPP_CPP11_STRICT_)
 add_definitions(-DASIO_STANDALONE)
 
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty/websocketpp)
+include_directories(${PROJECT_SOURCE_DIR}/thirdparty/json/include)
 include_directories(${ASIO_INCLUDE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 

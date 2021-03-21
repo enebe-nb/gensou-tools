@@ -9,14 +9,13 @@ body, #main {
     height: 100%;
     width: 100%;
 
-    img {
+    .img {
         position: absolute;
         top: 0;
-        display: block;
         height: 100%;
     }
 
-    &.right img {
+    &.right .img {
         right: 0;
         transform: scaleX(-1);
     }
@@ -27,21 +26,8 @@ body, #main {
     bottom: 0px;
     display: flex;
     flex-flow: wrap-reverse;
-    width: 12.5%;
-
-    .item {flex: 0 0 20%;}
+    .item {flex: 0 0 auto;}
     &.right {right: 0;}
-
-    &.r3-2 {
-        width: 5.55%;
-        .item {flex: 0 0 33.33%;}
-    }
-    &.r16-10 {
-        width: 8.33%;
-        .item {flex: 0 0 25%;}
-    }
-    &.r16-9 {width: 12.5%;}
-    &.r17-9 {width: 14.84%;}
 }
 
 .fade-enter-active, .fade-leave-active {

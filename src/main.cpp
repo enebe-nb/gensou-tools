@@ -1,104 +1,98 @@
 #define SWRS_USES_HASH
 
 #include "server.hpp"
+#include "events.hpp"
 #include <windows.h>
-#include <shlwapi.h>
+#include <vector>
 
 #include "swrs.h"
-#include "fields.h"
-//#include "address.h"
 
 static Server wsserver;
-static std::mutex dataLock;
 static bool isCreated = false;
-static std::string lastCharacters("characters 21 21");
-static std::string lastDeck1("deck1");
-static std::string lastDeck2("deck2");
 
-static DWORD orig_BattleOnProcess;
-#define BattleOnProcess(p) Ccall(p, orig_BattleOnProcess, int, ())()
+static DWORD orig_BattleOnCreate;
 static DWORD orig_BattleOnDestroy;
-#define BattleOnDestroy(p) Ccall(p, orig_BattleOnDestroy, void*, ())()
+static DWORD orig_BattleOnRoundEvent;
 
-#define ADDR_BMGR_P1 0x0C
-#define ADDR_BMGR_P2 0x10
+#define LPLAYERID (*(int*)0x00899D10)
+#define RPLAYERID (*(int*)0x00899D30)
+#define LPLAYERPTR (*(void**)(((int)g_pbattleMgr) + 0x0c))
+#define RPLAYERPTR (*(void**)(((int)g_pbattleMgr) + 0x10))
 
-std::string getDeckBase(void* player, std::string buffer) {
-	short** deckData = (short**)ACCESS_PTR(player, CF_DECK_BASE);
-	for (int i = 0; i < 20; ++i) {
-		buffer += " " + std::to_string(deckData[i/8][i%8]);
-	}
-	return buffer;
+std::vector<int> getDeckBase(void* player) {
+    std::vector<int> deck(20);
+    short** deckData = *(short***)(((int)player) + 0x5A0);
+    for (int i = 0; i < 20; ++i) {
+        deck[i] = deckData[i/8][i%8];
+    }
+    return deck;
+}
+
+Event::BattleBegin::BattleBegin() : Event("{\"type\":\"battleBegin\"}"_json) {
+    data["left"]["character"] = LPLAYERID;
+    data["left"]["deck"] = getDeckBase(LPLAYERPTR);
+    data["right"]["character"] = RPLAYERID;
+    data["right"]["deck"] = getDeckBase(RPLAYERPTR);
+}
+
+Event::BattleEnd::BattleEnd() : Event("{\"type\":\"battleEnd\"}"_json) {}
+
+Event::RoundEnd::RoundEnd() : Event("{\"type\":\"roundEnd\"}"_json) {
+    data["left"]["character"] = LPLAYERID;
+    data["left"]["rounds"] = *(((char*)LPLAYERPTR) + 0x573);
+    data["right"]["character"] = RPLAYERID;
+    data["right"]["rounds"] = *(((char*)RPLAYERPTR) + 0x573);
 }
 
 void onSocketOpen(websocketpp::connection_hdl conn) {
-	std::lock_guard<std::mutex> lock(dataLock);
-	if (!isCreated) return;
-	wsserver.send(conn, lastCharacters);
-	wsserver.send(conn, lastDeck1);
-	wsserver.send(conn, lastDeck2);
+    if (isCreated) wsserver.send(conn, Event::BattleBegin());
 }
 
-void comp_BattleOnCreate(void* This) {
-	void* p1 = ACCESS_PTR(g_pbattleMgr, ADDR_BMGR_P1);
-	void* p2 = ACCESS_PTR(g_pbattleMgr, ADDR_BMGR_P2);
-	
-	dataLock.lock();
-	lastCharacters = std::string("characters ") + std::to_string((int)ACCESS_CHAR(p1, CF_CHARACTER_INDEX)) + " " + std::to_string((int)ACCESS_CHAR(p2, CF_CHARACTER_INDEX));
-	lastDeck1 = getDeckBase(p1, "deck1");
-	lastDeck2 = getDeckBase(p2, "deck2");
-	dataLock.unlock();
+void __fastcall repl_BattleOnCreate(void* This, void* edx, int arg) {
+    Ccall(This, orig_BattleOnCreate, void, (int))(arg);
+    isCreated = true;
 
-	wsserver.send(lastCharacters);
-	wsserver.send(lastDeck1);
-	wsserver.send(lastDeck2);
+    wsserver.send(Event::BattleBegin());
 }
 
-// 0x2c ROUND BEFORE
+void __fastcall repl_BattleOnRoundEvent(void* This, void* edx, int id) {
+    Ccall(This, orig_BattleOnRoundEvent, void, (int))(id);
+
+    if (id == 3 || id == 5) wsserver.send(Event::RoundEnd());
+}
+
+// 0x2c ROUND END (not really)
 // 0x20 GAME LOOP
 // 0x1c ROUND LOOP
 // 0x08 DESTROY 2
-
-int __fastcall repl_BattleOnProcess(void* This) {
-	dataLock.lock();
-	if (!isCreated) {
-		isCreated = true;
-		dataLock.unlock();
-		comp_BattleOnCreate(This);
-	} else dataLock.unlock();
-
-	int ret = BattleOnProcess(This);
-	return ret;	
-}
+// 0x34 BATTLE EVENT
 
 void* __fastcall repl_BattleOnDestroy(void* This) {
-	dataLock.lock();
-	isCreated = false;
-	dataLock.unlock();
+    isCreated = false;
+    wsserver.send(Event::BattleEnd());
 
-	return BattleOnDestroy(This);
+    return Ccall(This, orig_BattleOnDestroy, void*, ())();
 }
 
-/* Entry point of the module */
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
-	return ::memcmp(TARGET_HASH, hash, sizeof TARGET_HASH) == 0;
+    return ::memcmp(TARGET_HASH, hash, sizeof TARGET_HASH) == 0;
 }
 
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
-	DWORD old;
-	::VirtualProtect((PVOID)rdata_Offset, rdata_Size, PAGE_WRITECOPY, &old);
-	orig_BattleOnProcess = TamperDword(vtbl_CBattleManager + 0x0c, union_cast<DWORD>(repl_BattleOnProcess));
-	orig_BattleOnDestroy = TamperDword(vtbl_CBattleManager + 0x08, union_cast<DWORD>(repl_BattleOnDestroy));
-	::VirtualProtect((PVOID)rdata_Offset, rdata_Size, old, &old);
-	::FlushInstructionCache(GetCurrentProcess(), NULL, 0);
+    DWORD old;
+    ::VirtualProtect((PVOID)rdata_Offset, rdata_Size, PAGE_WRITECOPY, &old);
+    orig_BattleOnCreate = TamperDword(vtbl_CBattleManager + 0x04, union_cast<DWORD>(repl_BattleOnCreate));
+    orig_BattleOnDestroy = TamperDword(vtbl_CBattleManager + 0x08, union_cast<DWORD>(repl_BattleOnDestroy));
+    orig_BattleOnRoundEvent = TamperDword(vtbl_CBattleManager + 0x34, union_cast<DWORD>(repl_BattleOnRoundEvent));
+    ::VirtualProtect((PVOID)rdata_Offset, rdata_Size, old, &old);
+    ::FlushInstructionCache(GetCurrentProcess(), NULL, 0);
 
-	wsserver.start(onSocketOpen);
-
-	return true;
+    wsserver.start(onSocketOpen);
+    return true;
 }
 
 extern "C" __declspec(dllexport) void AtExit() {
-	wsserver.stop();
+    wsserver.stop();
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
